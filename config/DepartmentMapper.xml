@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="com.googol24.mybatis.dao.DepartmentMapper">
+    <!--public Department getDepartmentById(int id);-->
+    <select id="getDepartmentById" resultType="com.googol24.mybatis.bean.Department">
+        SELECT id, dept_name AS departmentName FROM tbl_dept WHERE id=#{id}
+    </select>
+
+    <resultMap id="myDept" type="com.googol24.mybatis.bean.Department">
+        <id column="id" property="id"/>
+        <result column="dept_name" property="departmentName"/>
+
+        <!--
+        使用collection定义关联的集合类型的属性封装规则（嵌套结果集方式）
+            ofType: 指定了集合里面元素的类型
+        -->
+        <collection property="employees" ofType="com.googol24.mybatis.bean.Employee">
+            <id column="emp_id" property="id"/>
+            <result column="last_name" property="lastName"/>
+            <result column="gender" property="gender"/>
+            <result column="email" property="email"/>
+        </collection>
+    </resultMap>
+    <!--public Department getDepartmentByIdPlus(int id);-->
+    <select id="getDepartmentByIdPlus" resultMap="myDept">
+        SELECT d.id AS id, d.dept_name AS dept_name,
+			   e.id AS emp_id, e.last_name AS last_name, e.gender AS gender, e.email AS email
+        FROM tbl_dept d
+        LEFT JOIN tbl_employee e
+        ON d.id = e.dept_id
+        WHERE d.id = #{id};
+    </select>
+
+    <!--使用collection的分步查询-->
+
+    <resultMap id="myDeptStep" type="com.googol24.mybatis.bean.Department">
+        <id column="id" property="id"/>
+        <result column="dept_name" property="departmentName"/>
+
+        <!--
+        column中要传递多个参数时，使用column="{key1:column1,key2:column2}"格式
+        其中key表示SQL的字段参数，column表示列的名字
+        -->
+        <!--<collection property="employees" select="com.googol24.mybatis.dao.EmployeeMapper.getEmployeesByDeptId" column="id">-->
+        <!--fetchType表示延迟加载(lazy)或者立即加载(eager)，优先级比全局设置高-->
+        <collection property="employees" select="com.googol24.mybatis.dao.EmployeeMapper.getEmployeesByDeptId" column="{id=id}" fetchType="lazy">
+        </collection>
+    </resultMap>
+
+    <!--public Department getDepartmentByStep(int id);-->
+    <select id="getDepartmentByStep" resultMap="myDeptStep">
+        SELECT id,dept_name FROM tbl_dept WHERE id = #{deptId}
+    </select>
+
+</mapper>

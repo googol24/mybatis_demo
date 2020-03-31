@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--Mybatis SQL映射文件-->
+
+<!--<mapper namespace="org.googol24.mybatis.mapper.EmployeeMapper">-->
+
+<!-- 接口式编程： Mybatis提供了接口与配置文件进行动态绑定的功能 -->
+<!-- 把mapper的名称空间指定为需要实现的接口的全路径类名 -->
+<mapper namespace="com.googol24.mybatis.dao.EmployeeMapper">
+
+    <select id="selectOneEmployee" resultType="com.googol24.mybatis.bean.Employee">
+        select * from tbl_employee where id = #{id}
+    </select>
+
+    <!-- select标签的id指定为要实现的接口的方法名该。标签与接口的方法进行绑定，实现了接口的getEmployeeById方法 -->
+    <!--    databaseId属性指定全局配置文件里面配置的数据库厂商，即全局配置文件里databaseIdProvider标签里面指定的value-->
+    <select id="getEmployeeById" resultType="ss" databaseId="mysql"><!--这里的Employee是mybaits配置文件里面指定的别名-->
+        <!--select id,last_name as lastName,email,gender from tbl_employee where id = #{id}-->
+        <!-- 开启了mapUnderscoreToCamelCase配置后 -->
+        select * from tbl_employee where id = #{id}
+    </select>
+
+
+    <!--
+    insert标签
+
+    public void addEmployee(Employee employee); 的实现
+        id：要实现的接口的方法名
+        parameterType：可以省略
+        useGeneratedKeys：开启自增主键的时候获取自增主键的策略
+        keyProperty：指定对应的主键值属性，也即Mybatis获取到主键值之后，将这个值封装给JavaBean的哪个属性
+        注意：
+        1、这里的#{lastName}, #{email}, #{gender}指的是JavaBean com.googol24.mybatis.bean.Employee的属性
+        2、mysql支持自增主键，Mybatis也可以使用和JDBC类似的statement.getGeneratedKeys()策略来获取自增主键
+
+    -->
+    <!--<insert id="addEmployee" parameterType="com.googol24.mybatis.bean.Employee" useGeneratedKeys="true"-->
+            <!--keyProperty="id">-->
+        <!--INSERT INTO tbl_employee(`last_name`, `email`, `gender`) VALUES (#{lastName}, #{email}, #{gender})-->
+    <!--</insert>-->
+
+    <!--配合selectKey标签使用的例子-->
+    <insert id="addEmployee">
+        <!--
+        selectKey标签可以封装一个sql查询，keyProperty属性查询出需要的值封装给JavaBean的属性，
+        order属性指定执行顺序（BEFORE|AFTER,在这个insert操作的前面执行还是后面执行）
+        resultType属性指定了查询值的返回类型，因为这个查询的返回值是要封装给JavaBean的指定字段的
+        -->
+        <selectKey keyProperty="id" order="BEFORE" resultType="Integer">
+            SELECT MAX(`id`)+1 FROM tbl_employee
+        </selectKey>
+        INSERT INTO tbl_employee(`id`, `last_name`, `email`, `gender`) VALUES (#{id}, #{lastName}, #{email}, #{gender})
+    </insert>
+
+
+    <!--
+    update 标签
+
+    public void updateEmployee(Employee employee); 的实现
+    -->
+    <update id="updateEmployee" databaseId="mysql">
+        UPDATE tbl_employee SET `last_name`=#{lastName}, `email`=#{email}, `gender`=#{gender} WHERE id=#{id}
+    </update>
+
+
+    <!--
+    delete 标签
+
+    public void deleteEmployee(int id); 的实现
+    -->
+    <delete id="deleteEmployee">
+        DELETE FROM tbl_employee WHERE id=#{id}
+    </delete>
+
+
+    <!--多个参数处理-->
+    <select id="getEmployeeByIdAndLastName" resultType="com.googol24.mybatis.bean.Employee">
+        <!--SELECT * FROM tbl_employee WHERE `id` = #{param1} AND `last_name` = #{param2}-->
+        SELECT * FROM tbl_employee WHERE `id` = #{id} AND `last_name` = #{lastName}
+    </select>
+
+    <!--
+    多个参数处理 使用map的情况
+    public Employee getEmployeeByMap(Map<String, Object> map);
+    -->
+    <select id="getEmployeeByMap" resultType="com.googol24.mybatis.bean.Employee">
+        SELECT * FROM ${tableName} WHERE `id` = #{id} AND `last_name` = #{lastName}
+    </select>
+
+    <!--public List<Employee> getEmployeesByLastName(String lastName);-->
+    <!--
+    注意：resultType如果返回的是一个集合，要写集合中元素的类型
+    -->
+    <select id="getEmployeesByLastName" resultType="com.googol24.mybatis.bean.Employee">
+        SELECT * FROM tbl_employee WHERE last_name LIKE #{lastName}
+    </select>
+
+    <!--select标签 返回map类型处理-->
+    <!--
+    Mybatis中的resultType=map表示java.util.Map，返回的是指定对象的属性作为key，属性值作为value的一个map
+
+    public Map<String, Object> getEmployeeMapById(int id);
+    -->
+    <select id="getEmployeeMapById" resultType="map">
+        SELECT * FROM tbl_employee WHERE id=#{id}
+    </select>
+
+    <!--public Map<Integer, Employee> getEmployeeMapsByLastName(String lastName);-->
+    <!--
+        返回一个Employee列表的Map，key是employee的id，value是employee对象自己
+        可以使用@Mapkey注解告诉Mybatis封装这个Map的时候使用哪个属性作为map的key
+    -->
+    <select id="getEmployeeMapsByLastName" resultType="com.googol24.mybatis.bean.Employee">
+        SELECT * FROM tbl_employee WHERE last_name LIKE #{lastName}
+    </select>
+
+    <!--
+    自定义某个JavaBean的封装规则
+    type:自定义的JavaBean类型
+    id:唯一标识，方便引用
+    -->
+    <resultMap id="myEmp" type="com.googol24.mybatis.bean.Employee">
+        <!--指定主键列封装规则（和result标签相比，有优化规则）：column指定某一列，property指定与其对应的javaBean的属性-->
+        <id column="id" property="id"/>
+        <!--定义普通列的封装规则-->
+        <result column="last_name" property="lastName"/>
+        <result column="gender" property="gender"/>
+        <result column="email" property="email"/>
+        <!--其他列不指定的话使用默认的封装规则（列名和属性名相同，建议其他列也在这里指定好）-->
+    </resultMap>
+
+    <!--
+    select标签的resultMap：可以指定自定义的结果集规则，从而实现高级的结果集映射，不能与resultType一起使用
+
+    public Employee getEmpById(int id);
+    -->
+    <select id="getEmpById" resultMap="myEmp">
+        SELECT * FROM tbl_employee WHERE id = #{id}
+    </select>
+
+    <!--
+    联合查询：级联属性封装结果集
+    -->
+    <resultMap id="myEmpPlus" type="com.googol24.mybatis.bean.Employee">
+        <id column="id" property="id"/>
+        <result column="last_name" property="lastName"/>
+        <result column="gender" property="gender"/>
+        <result column="email" property="email"/>
+        <result column="dept_id" property="department.id"/>
+        <result column="dept_name" property="department.departmentName"/>
+    </resultMap>
+
+    <!--public Employee getEmpAndDept(int id);-->
+    <!--<select id="getEmpAndDept" resultMap="myEmpPlus">-->
+    <select id="getEmpAndDept" resultMap="myEmpPlus2">
+        SELECT e.id AS id, e.last_name AS last_name, e.gender AS gender, e.email AS email,
+               d.id AS dept_id, d.dept_name AS dept_name
+        FROM tbl_employee e JOIN tbl_dept d ON e.dept_id = d.id
+        WHERE e.id=#{id}
+    </select>
+
+    <!--也可以使用association来定义单个对象的封装规则，用于含有级联的对象-->
+    <resultMap id="myEmpPlus2" type="com.googol24.mybatis.bean.Employee">
+        <id column="id" property="id"/>
+        <result column="last_name" property="lastName"/>
+        <result column="gender" property="gender"/>
+        <result column="email" property="email"/>
+        <!--
+        association可以指定这里联合的javaBean对象
+            property：指定哪个属性是联合的对象
+            javaType：指定这个联合对象属性的类型（不能省略）
+        -->
+        <association property="department" javaType="com.googol24.mybatis.bean.Department">
+            <id column="dept_id" property="id"/>
+            <result column="dept_name" property="departmentName"/>
+        </association>
+    </resultMap>
+
+    <!--
+    使用association进行分步查询
+    1、根据指定的id查询Employee信息
+    2、根据查询出的Employee的字段dept_id查询Employee对应的department信息
+    -->
+    <resultMap id="myEmpByStep" type="com.googol24.mybatis.bean.Employee">
+        <id column="id" property="id"/>
+        <result column="last_name" property="lastName"/>
+        <result column="gender" property="gender"/>
+        <result column="email" property="email"/>
+
+        <!--
+        association定义关联对象的封装规则
+            select指定了获取当前属性需要调用的方法
+            column指定了调用该方法需要传入的参数
+            也即：使用select指定的方法（传入column指定的这列参数的值）查出对象，并封装给property指定的属性
+        -->
+        <association property="department" select="com.googol24.mybatis.dao.DepartmentMapper.getDepartmentById" column="dept_id"/>
+    </resultMap>
+
+    <!--public Employee getEmpByStep(int id);-->
+    <!--<select id="getEmpByStep" resultMap="myEmpByStep">-->
+    <select id="getEmpByStep" resultMap="myEmpDis">
+        SELECT * FROM tbl_employee WHERE id = #{id}
+    </select>
+
+    <!--
+    分步查询支持延迟加载的功能：每次查询Employee对象的时候，都将部门信息一起查询出来。如果把部门信息在使用的时候再去查询，这就叫延迟加载
+        实现策略：在分段查询的基础上加上两个全局配置
+            lazyLoadingEnabled:是否启用懒加载 true
+            aggressiveLazyLoading:是否侵入懒加载 false
+
+    -->
+
+    <!--public List<Employee> getEmployeesByDeptId(int deptId);-->
+    <select id="getEmployeesByDeptId" resultType="com.googol24.mybatis.bean.Employee">
+        SELECT * FROM tbl_employee WHERE dept_id = #{id}
+    </select>
+
+    <!--
+    discriminator
+    Mybatis可以根据discriminator来判断某列的值，然后根据某列的值改变封装行为
+        例如：查询Employee的时候，如果gender=0，查询出部门信息；如果gender=1，把last_name这列的值赋值给email
+    -->
+    <resultMap id="myEmpDis" type="com.googol24.mybatis.bean.Employee">
+        <id column="id" property="id"/>
+        <result column="last_name" property="lastName"/>
+        <result column="gender" property="gender"/>
+        <result column="email" property="email"/>
+
+        <!--根据gender区分封装行为-->
+        <discriminator javaType="string" column="gender">
+            <!--gender="0"-->
+            <case value="0" resultType="com.googol24.mybatis.bean.Employee">
+                <association property="department" select="com.googol24.mybatis.dao.DepartmentMapper.getDepartmentById" column="dept_id"/>
+            </case>
+            <!--gender="1"-->
+            <case value="1" resultType="com.googol24.mybatis.bean.Employee">
+                <id column="id" property="id"/>
+                <result column="last_name" property="lastName"/>
+                <result column="gender" property="gender"/>
+                <result column="last_name" property="email"/>
+            </case>
+        </discriminator>
+    </resultMap>
+</mapper>

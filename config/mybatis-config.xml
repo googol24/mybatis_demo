@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd"> <!-- dtd文件：xml的约束文件，规定了xml文件中的标签语法规则 -->
+<!--Mybatis全局配置文件-->
+
+<configuration>
+    <!--
+    注意：Mybatis全局配置文件里面的各个标签出现的先后顺序是有要求的
+    properties -> settings -> typeAliases -> typeHandlers -> objectFactory -> objectWrapperFactory
+    -> reflectorFactory -> plugins -> environments -> databaseIdProvider -> mappers
+    -->
+
+    <!--
+    Mybatis可以使用properties标签来引入外部properties配置文件的内容
+    resource属性：引入类路径下的资源文件
+    url属性：引入网络路径或者磁盘路径下的资源文件
+    -->
+    <properties resource="dbconfig.properties"/>
+
+    <!--
+    settings标签包含了很多重要的全局设置项
+    settings下面的每一个setting子标签代表一个设置项
+        name表示设置项的名称,value表示设置项的取值（不设置的时候有默认值）
+        例如：mapUnderscoreToCamelCase设置项： 开启自动驼峰命名规则，数据库字段与JavaBean实体类的属性可以对应起来（默认为false）
+    -->
+    <settings>
+        <!--显式指定需要更改的配置值，即使是默认的。防止因为版本更新出现意外-->
+        <!--<setting name="mapUnderscoreToCamelCase" value="true"/>-->
+        <setting name="mapUnderscoreToCamelCase" value="false"/>
+        <setting name="lazyLoadingEnabled" value="true"/>
+        <setting name="aggressiveLazyLoading" value="false"/>
+    </settings>
+
+    <!--
+    typeAliases 别名处理器标签。可以为Java类型起别名，注意别名是不区分大小写的。这里指定的别名是可以在mapper配置文件的resultType中使用的
+    typeAliases下面的每一个typeAlias可以为某一个Java类起一个别名
+        type指定要起别名的类型全类名
+        alias指定要起的别名，默认别名就是类名小写
+    typeAliases下面的package标签可以为某个包下的所有类批量起别名
+        name指定了包名，默认别名为类名小写
+        批量起别名的情况下，可以在JavaBean类上面使用@Alias注解为某个类型指定新的别名（包里面批量起别名的时候某个包的子包可能有类别名冲突的情况）
+    -->
+    <typeAliases>
+        <!--<typeAlias type="com.googol24.mybatis.bean.Employee" alias="emp"/>-->
+        <package name="com.googol24.mybatis.bean"/>
+    </typeAliases>
+
+
+    <!--
+    typeHandlers 类型处理器标签。作用：Java类型与数据库字段类型之间的适配
+    -->
+
+    <!--
+    plugins 插件标签。主要有以下四大类型对象的插件标签
+        Executor
+        ParameterHandler
+        ResultSetHandler
+        StatementHandler
+    -->
+
+    <!--
+    environments 环境配置标签。Mybatis可以配置多种环境，其default属性可以用于指定默认使用哪一种环境（对应environment的id）
+    environments下面的每一个environment配置某一个具体的环境信息，每一个environment里必须包含transactionManager标签和dataSource标签
+        transactionManager 事务管理器
+            type属性：JDBC|MANAGED，JDBC事务管理方式(JdbcTransactionFactory)|J2EE容器事务管理方式(ManagedTransactionFactory)
+                     也可以自定义事务管理器，只要自己去实现TransactionFactory接口即可，type对应为实现接口的类的全类名
+        dataSource 数据源
+            type属性：UNPOOLED（UnpooledDataSourceFactory，不使用连接池，每次操作都新建连接）| POOLED（PooledDataSourceFactory，默认，使用连接池）| JNDI（JndiDataSourceFactory，使用JNDI）
+                     也可以自定义数据源类型，实现DataSourceFactory接口即可，type对应为实现接口的类的全类名
+    -->
+    <environments default="development">
+        <environment id="development">
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <property name="driver" value="${jdbc.driver}"/>
+                <property name="url" value="${jdbc.url}"/>
+                <property name="username" value="${jdbc.username}"/>
+                <property name="password" value="${jdbc.password}"/>
+            </dataSource>
+        </environment>
+    </environments>
+
+    <!--
+    databaseIdProvider标签：用于支持多数据库厂商
+        type属性：作用就是得到数据库厂商的标识（驱动, Connection.getDatabaseProductName），mybatis就能根据数据库厂商的标识来执行不同的sql
+        type="DB_VENDOR"(VendorDatabaseIdProvider)
+    -->
+    <databaseIdProvider type="DB_VENDOR">
+        <!--为不同的数据库厂商起别名-->
+        <property name="MySQL" value="mysql"/>
+        <property name="Oracle" value="oracle"/>
+        <property name="SQL Server" value="sql server"/>
+    </databaseIdProvider>
+
+    <!--
+    mappers标签：将SQL映射注册到全局配置中
+        mapper:
+            resource属性：注册配置文件，引用类路径下的sql映射文件
+            url属性：注册配置文件，引用磁盘路径或者网络路径下的sql映射文件
+            class属性：引用（注册）接口
+                方式1：有sql映射文件，映射文件的文件名必须和接口同名，并且放在与接口的同一目录下
+                方式2：没有sql映射文件，所有的sql都是利用注解写在接口上。缺陷：sql又和代码区分开来
+                推荐：比较重要/复杂的Dao接口，写sql映射文件；不重要/简单的dao接口为了开发方便，可以采用注解方式
+
+        package：用于批量注册
+            name属性：需要批量注册的包名，需要包里面接口必须和映射文件的文件名同名，并且映射文件的文件名放在与接口的同一目录下
+
+    -->
+    <mappers>
+        <mapper resource="EmployeeMapper.xml"/>
+        <mapper class="com.googol24.mybatis.dao.EmployeeMapperAnnotation"/>
+        <mapper resource="DepartmentMapper.xml"/>
+    </mappers>
+</configuration>
